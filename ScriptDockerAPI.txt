@@ -1,0 +1,68 @@
+docker run --name test -p 5433:5432 \
+                -e POSTGRES_PASSWORD=isima \
+                -d postgres
+
+./postgrest
+
+docker exec -it test psql -U postgres
+
+-------------------------------------
+
+/* Commandes SQL API*/
+
+create schema api;
+
+-- Table: api.entity
+
+CREATE TABLE api.entity
+(
+    id integer NOT NULL PRIMARY KEY,
+    createdat date NOT NULL
+);
+
+INSERT INTO api.entity values (1, '2020-06-16');
+INSERT INTO api.entity values (2, '2020-05-16');
+
+create role web_anonyme nologin;
+
+grant usage on schema api to web_anonyme;
+grant select on api.entity to web_anonyme;
+
+create role authenticator noinherit login password 'isima';
+grant web_anonyme to authenticator;
+
+-- Table: api.company
+
+CREATE TABLE api.company
+(
+    -- Inherited from table api.entity: id integer NOT NULL,
+    -- Inherited from table api.entity: createdat date NOT NULL,
+    name character varying(25) COLLATE pg_catalog."default" NOT NULL,
+    CONSTRAINT company_pk PRIMARY KEY (name, id)
+)
+    INHERITS (api.entity)
+TABLESPACE pg_default;
+
+-- Table: api.device
+
+CREATE TABLE api.device
+(
+    -- Inherited from table api.entity: id bigint NOT NULL,
+    -- Inherited from table api.entity: createdat date NOT NULL,
+    uuid character varying(25) COLLATE pg_catalog."default" NOT NULL,
+    lastemit date,
+    countemit bigint,
+    disabletag boolean,
+    addressip character varying COLLATE pg_catalog."default",
+    CONSTRAINT device_pk PRIMARY KEY (uuid, id)
+)
+    INHERITS (api.entity)
+TABLESPACE pg_default;
+
+\q
+
+/* Fin des commandes SQL */
+
+----------------------------------
+
+./postgrest test.conf
